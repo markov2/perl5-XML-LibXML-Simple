@@ -539,7 +539,7 @@ eval {
   $opt = XMLin($fh, @cont_key);
 };
 is($@, '', "XMLin didn't choke on an IO::File object");
-is($opt->{location}, $XMLFile, 'and it parsed the right file');
+is($opt->{location}, 't/10XMLin.xml', 'and it parsed the right file');
 
 
 # Try parsing from STDIN
@@ -551,7 +551,7 @@ eval {
   $opt = XMLin('-');
 };
 is($@, '', "XMLin didn't choke on STDIN ('-')");
-is($opt->{location}, $XMLFile, 'and data parsed correctly');
+is($opt->{location}, 't/10XMLin.xml', 'and data parsed correctly');
 
 
 # Confirm anonymous array handling works in general

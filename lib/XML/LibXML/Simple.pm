@@ -833,8 +833,8 @@ to parse to this data structure:
                 }
     }
 
-The '+' indicates that the value of the key attribute should be copied rather
-than moved to the folded hash key.
+The '+' indicates that the value of the key attribute should be copied
+rather than moved to the folded hash key.
 
 A '-' prefix would produce this result:
 
@@ -860,7 +860,7 @@ When used with C<XMLin()>, any attributes in the XML will be ignored.
 This option controls how whitespace in text content is handled.  Recognised
 values for the option are:
 
-=over 8
+=over 4
 
 =item 0
 
@@ -1065,3 +1065,5 @@ XML::Simple is not the right tool for your job - check out the next section.
 L<XML::Compile> for processing XML when a schema is available
 
 L<XML::Simple>, the SAX and original implementation
+
+=cut

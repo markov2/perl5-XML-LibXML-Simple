@@ -1,0 +1,19 @@
+
+=== version history for XML::LibXML::Simple
+
+version 0.13:
+	Improvements:
+	- include the ChangeLog in the package.  Discovered by [CPANTS]
+
+version 0.12: Wed Mar 26 11:43:09 CET 2008
+	Fixes:
+	- fix tests on Windows.
+
+version 0.11: Fri Feb  8 14:41:35 CET 2008
+	Improvements:
+	- moved XML input parsing to separate subroutine
+	- added ChangeLog
+	- added some more docs
+
+version 0.10: Mon Feb  4 17:46:07 CET 2008
+	- initial release
