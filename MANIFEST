@@ -5,6 +5,7 @@ lib/XML/LibXML/Simple.pm
 t/01use.t
 t/10XMLin.t
 t/10XMLin.xml
+t/99pod.t
 t/srt.xml
 t/subdir/test2.xml
 t/test1.xml

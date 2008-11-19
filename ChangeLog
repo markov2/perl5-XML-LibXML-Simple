@@ -1,9 +1,14 @@
 
 === version history for XML::LibXML::Simple
 
-version 0.13:
+version 0.13: Wed Nov 19 11:03:52 CET 2008
+	Fixes:
+	- do not try to expand namespace in "pseudo-" attributes, like
+	  namespace declarations.
+
 	Improvements:
 	- include the ChangeLog in the package.  Discovered by [CPANTS]
+	- add option NsStrip
 
 version 0.12: Wed Mar 26 11:43:09 CET 2008
 	Fixes:

@@ -42,7 +42,7 @@ uses plain Perl or SAX parsers.
 my %known_opts = map { ($_ => 1) }
   qw(keyattr keeproot forcecontent contentkey noattr searchpath
      forcearray grouptags nsexpand normalisespace normalizespace
-     valueattr);
+     valueattr nsstrip);
 
 my @DefKeyAttr     = qw(name key id);
 my $DefContentKey  = qq(content);
@@ -107,9 +107,9 @@ sub _get_xml($$)
     my $xml
       = UNIVERSAL::isa($source,'XML::LibXML::Document') ? $source
       : UNIVERSAL::isa($source,'XML::LibXML::Element') ? $source
-      : ref $source eq 'SCALAR'      ? $parser->parse_string($$source)
-      : ref $source                  ? $parser->parse_fh($source)
-      : $source =~ m{^\s*<.*?>\s*$}s ? $parser->parse_string($source)
+      : ref $source eq 'SCALAR' ? $parser->parse_string($$source)
+      : ref $source             ? $parser->parse_fh($source)
+      : $source =~ m{^\s*\<.*?\>\s*$}s ? $parser->parse_string($source)
       :    $parser->parse_file
               ($self->find_xml_file($source, @{$opts->{searchpath}}));
 
@@ -275,7 +275,12 @@ sub collapse($$)
         {   my $value = $attr->value;
             $value = $self->normalise_space($value)
                 if $opts->{normalisespace}==2;
-            my $n = $opts->{nsexpand} ? _expand_name($attr) : $attr->nodeName;
+
+            my $n  = !$attr->isa('XML::LibXML::Attr') ? $attr->nodeName
+                   : $opts->{nsexpand}                ? _expand_name($attr)
+                   : $opts->{nsstrip}                 ? $attr->localName
+                   :                                    $attr->nodeName;
+
             _add_kv \%data, $n, $value, $opts;
         }
     }
@@ -288,7 +293,9 @@ sub collapse($$)
         if($child->isa('XML::LibXML::Element'))
         {   $nr_elems++;
             my $v = $self->collapse($child, $opts);
-            my $n = $opts->{nsexpand} ? _expand_name($child) : $child->nodeName;
+            my $n = $opts->{nsexpand} ? _expand_name($child)
+                  : $opts->{nsstrip}  ? $child->localName
+                  :                     $child->nodeName;
             _add_kv \%data, $n, $v, $opts if defined $v;
         }
         elsif($child->isa('XML::LibXML::Text'))
@@ -919,6 +926,51 @@ instead of this (the default):
     colour => { value => 'red' },
     size   => { value => 'XXL' }
   }
+
+=item NsExpand => 0  I<advised>
+
+When name-spaces are used, the default behavior is to include the
+prefix in the key name.  However, this is very dangerous: the prefixes
+can be changed without a change of the XML message meaning.  Therefore,
+you can better use this C<NsExpand> option.  The downside, however, is
+that the labels get very long.
+
+Without this option:
+
+  <record xmlns:x="http://xyz">
+    <x:field1>42</x:field1>
+  </record>
+  <record xmlns:y="http://xyz">
+    <y:field1>42</y:field1>
+  </record>
+
+translates into
+
+  { 'x:field1' => 42 }
+  { 'y:field1' => 42 }
+
+but both source component have exactly the same meaning.  When C<NsExpand>
+is used, the result is:
+
+  { '{http://xyz}field1' => 42 }
+  { '{http://xyz}field1' => 42 }
+
+Of course, addressing these fields is more work.  It is advised to implement
+it like this:
+
+  my $ns = 'http://xyz';
+  $data->{"{$ns}field1"};
+
+=item NsStrip => 0 I<sloppy coding>
+
+[not available in XML::Simple]
+Namespaces are really important to avoid name collissions, but they are
+a bit of a hassle.  To do it correctly, use option C<NsExpand>.  To do
+it sloppy, use C<NsStrip>.  With this option set, the above example will
+return
+
+  { field1 => 42 }
+  { field1 => 42 }
 
 =back
 
