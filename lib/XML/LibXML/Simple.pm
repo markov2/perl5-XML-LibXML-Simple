@@ -94,6 +94,7 @@ sub XMLin
 
     $top;
 }
+*xml_in = \&XMLin;
 
 my $parser;
 sub _get_xml($$)

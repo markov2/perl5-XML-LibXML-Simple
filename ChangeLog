@@ -1,6 +1,12 @@
 
 === version history for XML::LibXML::Simple
 
+version 0.14: Fri Jul 16 11:17:49 CEST 2010
+	Fixes:
+	- do not use /bin/pwd in t/99pod.t
+	- forgot to define xml_in.
+	  rt.cpan.org#59172 [Justin Case]
+
 version 0.13: Wed Nov 19 11:03:52 CET 2008
 	Fixes:
 	- do not try to expand namespace in "pseudo-" attributes, like
