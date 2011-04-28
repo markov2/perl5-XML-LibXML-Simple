@@ -96,14 +96,12 @@ sub XMLin
 }
 *xml_in = \&XMLin;
 
-my $parser;
 sub _get_xml($$)
 {   my ($self, $source, $opts) = @_;
 
     $source    = $self->default_data_source($opts) unless defined $source;
     $source    = \*STDIN if $source eq '-';
-
-    $parser  ||= XML::LibXML->new;
+    my $parser = XML::LibXML->new;
 
     my $xml
       = UNIVERSAL::isa($source,'XML::LibXML::Document') ? $source
