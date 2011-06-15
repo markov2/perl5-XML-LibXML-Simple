@@ -42,7 +42,7 @@ uses plain Perl or SAX parsers.
 my %known_opts = map { ($_ => 1) }
   qw(keyattr keeproot forcecontent contentkey noattr searchpath
      forcearray grouptags nsexpand normalisespace normalizespace
-     valueattr nsstrip);
+     valueattr nsstrip parser parseropts);
 
 my @DefKeyAttr     = qw(name key id);
 my $DefContentKey  = qq(content);
@@ -62,7 +62,12 @@ section of this manual page.
 sub new(@)
 {   my $class = shift;
     my $self  = bless {}, $class;
-    $self->{opts} = $self->_take_opts(@_);
+    my $opts  = $self->{opts} = $self->_take_opts(@_);
+
+    # parser object cannot be reused
+    !defined $opts->{parser}
+        or error __x"parser option for XMLin only";
+
     $self;
 }
 
@@ -99,9 +104,14 @@ sub XMLin
 sub _get_xml($$)
 {   my ($self, $source, $opts) = @_;
 
-    $source    = $self->default_data_source($opts) unless defined $source;
-    $source    = \*STDIN if $source eq '-';
-    my $parser = XML::LibXML->new;
+    $source    = $self->default_data_source($opts)
+        unless defined $source;
+
+    $source    = \*STDIN
+        if $source eq '-';
+
+    my $parser = $opts->{parser}
+              || $self->_create_parser($opts->{parseropts});
 
     my $xml
       = UNIVERSAL::isa($source,'XML::LibXML::Document') ? $source
@@ -116,6 +126,22 @@ sub _get_xml($$)
          if $xml->isa('XML::LibXML::Document');
 
     $xml;
+}
+
+sub _create_parser(@)
+{   my $self = shift;
+    my @popt = @_ != 1 ? @_ : ref $_[0] eq 'HASH' ? %{$_[0]} : @{$_[0]};
+
+    XML::LibXML->new
+      ( line_numbers    => 1
+      , no_network      => 1
+      , expand_xinclude => 0
+      , expand_entities => 1
+      , load_ext_dtd    => 0
+      , ext_ent_handler =>
+           sub { alert __x"parsing external entities disabled"; '' }
+      , @popt
+      );
 }
 
 sub _take_opts(@)
@@ -205,6 +231,8 @@ sub _init($$)
     !$opt{grouptags} || ref $opt{grouptags} eq 'HASH'
         or croak "Illegal value for 'GroupTags' option -expected a hashref";
 
+    $opt{parseropts} ||= {};
+
     \%opt;
 }
 
@@ -253,9 +281,9 @@ sub _add_kv($$$$)
     $d->{$k};
 }
 
-# Takes the parse tree that XML::Parser produced from the supplied XML and
-# recurses through it 'collapsing' unnecessary levels of indirection (nested
-# arrays etc) to produce a data structure that is easier to work with.
+# Takes the parse tree that XML::LibXML::Parser produced from the supplied
+# XML and recurse through it 'collapsing' unnecessary levels of indirection
+# (nested arrays etc) to produce a data structure that is easier to work with.
 
 sub _expand_name($)
 {   my $node = shift;
@@ -490,27 +518,26 @@ module has some differences with M<XML::Simple> to be aware of.
 
 =over 4
 
-=item .
+=item only M<XMLin()> is supported
 
-Only M<XMLin()> is supported: if you want to write XML the use a schema
-(for instance with M<XML::Compile>).  Do not attempt to create XML by
-hand!  If you still think you need it, then have a look at XMLout() as
-implemented by M<XML::Simple> or any of a zillion template systems.
+If you want to write XML then use a schema (for instance with
+M<XML::Compile>). Do not attempt to create XML by hand!  If you still
+think you need it, then have a look at XMLout() as implemented by
+M<XML::Simple> or any of a zillion template systems.
 
-=item .
+=item no "variables" option
 
 IMO, you should use a templating system if you want variables filled-in
 in the input: it is not a task for this module.
 
-=item .
+=item empty elements are not removed
 
-Also, empty elements are not removed: being empty has a meaning which
-should not be ignored.
+Being empty has a meaning which should not be ignored.
 
-=item .
+=item ForceArray options
 
 There are a few small differences in the result of the C<forcearray> option,
-because XML::Simple seems to behave inconsequently.
+because M<XML::Simple> seems to behave inconsequently.
 
 =back
 
@@ -888,6 +915,23 @@ whitespace is normalised in all text content
 
 Note: you can spell this option with a 'z' if that is more natural for you.
 
+=item Parser => OBJECT
+
+You may pass your own M<XML::LibXML> object, in stead of having one
+created for you. This is useful when you need specific configuration
+on that object (See M<XML::LibXML::Parser>) or have implemented your
+own extension to that object.
+
+The internally created parser object is configured in safe mode.
+Read the M<XML::LibXML::Parser> manual about security issues with
+certain parameter settings.  The default is unsafe!
+
+=item ParserOpts => HASH|ARRAY
+
+Pass parameters to the creation of a new internal parser object. You
+can overrule the options which will create a safe parser. It may be more
+readible to use the C<Parser> parameter.
+
 =item SearchPath => [ list ] I<# handy>
 
 If you pass C<XMLin()> a filename, but the filename include no directory
@@ -902,7 +946,7 @@ If the first parameter to C<XMLin()> is undefined, the default SearchPath
 will contain only the directory in which the script itself is located.
 Otherwise the default SearchPath will be empty.  
 
-=item ValueAttr => [ names ] I<# in - handy>
+=item ValueAttr => [ names ] I<# handy>
 
 Use this option to deal elements which always have a single attribute and no
 content.  Eg:

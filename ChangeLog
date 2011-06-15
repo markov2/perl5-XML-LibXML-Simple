@@ -1,6 +1,14 @@
 
 === version history for XML::LibXML::Simple
 
+version 0.90: Wed Jun 15 10:20:48 CEST 2011
+	Fixes:
+	- initialize XML::LibXML::Parser into safe mode.
+	  rt.cpan.org#68803 [Yann Kerherve]
+
+	Improvements:
+	- new Parser and ParserOpts parameters
+
 version 0.15: Thu Apr 28 10:22:34 CEST 2011
 	Fixes:
 	- parser object recreated each time, because it cannot be
