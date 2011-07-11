@@ -1,6 +1,11 @@
 
 === version history for XML::LibXML::Simple
 
+version 0.91: Mon Jul 11 22:40:02 CEST 2011
+	Fixes:
+	- forcearray option with one element
+	  rt.cpan.org#69336 [Matt W Johnson]
+
 version 0.90: Wed Jun 15 10:20:48 CEST 2011
 	Fixes:
 	- initialize XML::LibXML::Parser into safe mode.
