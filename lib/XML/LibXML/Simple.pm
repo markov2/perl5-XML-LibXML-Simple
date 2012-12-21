@@ -1,5 +1,6 @@
 package XML::LibXML::Simple;
 use base 'Exporter';
+
 use strict;
 use warnings;
 
@@ -26,7 +27,7 @@ XML::LibXML::Simple - XML::LibXML clone of XML::Simple::XMLin()
 Or the Object Oriented way:
 
   use XML::LibXML::Simple   ();
-  my $xs = XML::Simple->new(OPTIONS);
+  my $xs = XML::LibXML::Simple->new(OPTIONS);
   my $ref = $xs->XMLin(<xml file or string>, OPTIONS);
 
 =chapter DESCRIPTION
@@ -115,7 +116,7 @@ sub _get_xml($$)
 
     my $xml
       = UNIVERSAL::isa($source,'XML::LibXML::Document') ? $source
-      : UNIVERSAL::isa($source,'XML::LibXML::Element') ? $source
+      : UNIVERSAL::isa($source,'XML::LibXML::Element' ) ? $source
       : ref $source eq 'SCALAR' ? $parser->parse_string($$source)
       : ref $source             ? $parser->parse_fh($source)
       : $source =~ m{^\s*\<.*?\>\s*$}s ? $parser->parse_string($source)
@@ -227,13 +228,13 @@ sub _init($$)
     # Special cleanup for {valueattr} which could be arrayref or hashref
 
     my $va = delete $opt{valueattr} || {};
-    $va = { map { ($_ => 1) } @$va } if ref $va eq 'ARRAY';
+    $va = +{ map +($_ => 1), @$va } if ref $va eq 'ARRAY';
     $opt{valueattrlist} = $va;
 
     # make sure there's nothing weird in {grouptags}
 
     !$opt{grouptags} || ref $opt{grouptags} eq 'HASH'
-        or croak "Illegal value for 'GroupTags' option -expected a hashref";
+         or croak "Illegal value for 'GroupTags' option -expected a hashref";
 
     $opt{parseropts} ||= {};
 
@@ -272,7 +273,7 @@ sub _add_kv($$$$)
        && $k ne $opts->{contentkey} 
        && $opts->{forcearray_always}) { push @{$d->{$k}}, $v }
     elsif($opts->{forcearray_elem}{$k}
-        || grep {$k =~ $_} @{$opts->{forcearray_regex}}
+        || grep $k =~ $_, @{$opts->{forcearray_regex}}
          )                            { push @{$d->{$k}}, $v }
     else                              { $d->{$k} = $v }
     $d->{$k};
@@ -339,14 +340,14 @@ sub collapse($$)
     # Roll up 'value' attributes (but only if no nested elements)
 
     if(keys %data==1)
-    {    my $k = (keys %data)[0];
+    {    my ($k) = keys %data;
          return $data{$k} if $opts->{valueattrlist}{$k};
     }
 
     # Turn arrayrefs into hashrefs if key fields present
 
     if($opts->{keyattr})
-    {   while(my ($key,$val) = each %data)
+    {   while(my ($key, $val) = each %data)
         {   $data{$key} = $self->array_to_hash($key, $val, $opts)
                 if ref $val eq 'ARRAY';
         }
@@ -492,7 +493,7 @@ sub array_to_hash($$$$)
         return \%out;
     }
 
-    $out{$_} =  $out{$_}{$contentkey} for keys %out;
+    $out{$_} = $out{$_}{$contentkey} for keys %out;
     \%out;
 }
   
@@ -503,7 +504,7 @@ __END__
 =chapter FUNCTIONS
 
 The functions C<XMLin> (exported implictly) and C<xml_in>
-(exported on request) simply call C<< XML::Simple->new->XMLin() >>
+(exported on request) simply call C<<XML::LibXML::Simple->new->XMLin() >>
 with the provided parameters.
 
 =chapter DETAILS
@@ -614,15 +615,15 @@ In alphabetic order:
 When text content is parsed to a hash value, this option let's you specify a
 name for the hash key to override the default 'content'.  So for example:
 
-  XMLin('<opt one="1">Text</opt>', ContentKey => 'text')
+  XMLin('<opt one="1">Two</opt>', ContentKey => 'text')
 
 will parse to:
 
-  { 'one' => 1, 'text' => 'Text' }
+  { one => 1, text => 'Two' }
 
 instead of:
 
-  { 'one' => 1, 'content' => 'Text' }
+  { one => 1, content => 'Two' }
 
 You can also prefix your selected key name with a '-' character to have 
 C<XMLin()> try a little harder to eliminate unnecessary 'content' keys after
@@ -638,18 +639,18 @@ array folding.  For example:
 will parse to:
 
   {
-    'item' => {
-      'one' =>  'First'
-      'two' =>  'Second'
+     item => {
+      one =>  'First'
+      two =>  'Second'
     }
   }
 
 rather than this (without the '-'):
 
   {
-    'item' => {
-      'one' => { 'content' => 'First' }
-      'two' => { 'content' => 'Second' }
+    item => {
+      one => { content => 'First' }
+      two => { content => 'Second' }
     }
   }
 
@@ -665,17 +666,11 @@ XML:
 
 would parse to this:
 
-    {
-      'name' => [
-                  'value'
-                ]
-    }
+    { name => [ 'value' ] }
 
 instead of this (the default):
 
-    {
-      'name' => 'value'
-    }
+    { name => 'value' }
 
 This option is especially useful if the data structure is likely to be written
 back out as XML and the default behaviour of rolling single nested elements up
@@ -713,15 +708,15 @@ a hash value even when there are no attributes.  So for example:
 will parse to:
 
   {
-    'x' => {           'content' => 'text1' },
-    'y' => { 'a' => 2, 'content' => 'text2' }
+    x => {         content => 'text1' },
+    y => { a => 2, content => 'text2' }
   }
 
 instead of:
 
   {
-    'x' => 'text1',
-    'y' => { 'a' => 2, 'content' => 'text2' }
+    x => 'text1',
+    y => { 'a' => 2, 'content' => 'text2' }
   }
 
 =item GroupTags => { grouping tag => grouped tag } I<# handy>
@@ -741,8 +736,8 @@ Would normally be read into a structure like this:
 
   {
     searchpath => {
-                    dir => [ '/usr/bin', '/usr/local/bin', '/usr/X11/bin' ]
-                  }
+       dir => [ '/usr/bin', '/usr/local/bin', '/usr/X11/bin' ]
+    }
   }
 
 But when read in with the appropriate value for 'GroupTags':
@@ -791,30 +786,24 @@ For example, this XML:
 would, by default, parse to this:
 
     {
-      'user' => [
-                  {
-                    'login' => 'grep',
-                    'fullname' => 'Gary R Epstein'
-                  },
-                  {
-                    'login' => 'stty',
-                    'fullname' => 'Simon T Tyson'
-                  }
-                ]
+      user => [
+         { login    => 'grep',
+           fullname => 'Gary R Epstein'
+         },
+         { login    => 'stty',
+           fullname => 'Simon T Tyson'
+         }
+      ]
     }
 
 If the option 'KeyAttr => "login"' were used to specify that the 'login'
 attribute is a key, the same XML would parse to:
 
     {
-      'user' => {
-                  'stty' => {
-                              'fullname' => 'Simon T Tyson'
-                            },
-                  'grep' => {
-                              'fullname' => 'Gary R Epstein'
-                            }
-                }
+      user => {
+         stty => { fullname => 'Simon T Tyson' },
+         grep => { fullname => 'Gary R Epstein' }
+      }
     }
 
 The key attribute names should be supplied in an arrayref if there is more
@@ -851,16 +840,16 @@ The option 'KeyAttr => { user => "+login" }' will cause this XML:
 to parse to this data structure:
 
     {
-      'user' => {
-                  'stty' => {
-                              'fullname' => 'Simon T Tyson',
-                              'login'    => 'stty'
-                            },
-                  'grep' => {
-                              'fullname' => 'Gary R Epstein',
-                              'login'    => 'grep'
-                            }
-                }
+      user => {
+         stty => {
+            fullname => 'Simon T Tyson',
+            login    => 'stty'
+         },
+         grep => {
+            fullname => 'Gary R Epstein',
+            login    => 'grep'
+         }
+      }
     }
 
 The '+' indicates that the value of the key attribute should be copied
@@ -869,16 +858,16 @@ rather than moved to the folded hash key.
 A '-' prefix would produce this result:
 
     {
-      'user' => {
-                  'stty' => {
-                              'fullname' => 'Simon T Tyson',
-                              '-login'    => 'stty'
-                            },
-                  'grep' => {
-                              'fullname' => 'Gary R Epstein',
-                              '-login'    => 'grep'
-                            }
-                }
+      user => {
+         stty => {
+            fullname => 'Simon T Tyson',
+            -login   => 'stty'
+         },
+         grep => {
+            fullname => 'Gary R Epstein',
+            -login    => 'grep'
+         }
+      }
     }
 
 =item NoAttr => 1 I<# handy>
@@ -1023,8 +1012,8 @@ When C<XMLin()> reads the following very simple piece of XML:
 it returns the following data structure:
 
     {
-      'username' => 'testuser',
-      'password' => 'frodo'
+      username => 'testuser',
+      password => 'frodo'
     }
 
 The identical result could have been produced with this alternative XML:
@@ -1051,21 +1040,16 @@ Repeated nested elements are represented as anonymous arrays:
     </opt>
 
     {
-      'person' => [
-                    {
-                      'email' => [
-                                   'joe@smith.com',
-                                   'jsmith@yahoo.com'
-                                 ],
-                      'firstname' => 'Joe',
-                      'lastname' => 'Smith'
-                    },
-                    {
-                      'email' => 'bob@smith.com',
-                      'firstname' => 'Bob',
-                      'lastname' => 'Smith'
-                    }
-                  ]
+      person => [
+        { email     => [ 'joe@smith.com', 'jsmith@yahoo.com' ],
+          firstname => 'Joe',
+          lastname  => 'Smith'
+        },
+        { email     => 'bob@smith.com',
+          firstname => 'Bob',
+          lastname  => 'Smith'
+        }
+      ]
     }
 
 Nested elements with a recognised key attribute are transformed (folded) from
@@ -1079,20 +1063,20 @@ option):
     </opt>
 
     {
-      'person' => {
-                    'jbloggs' => {
-                                   'firstname' => 'Joe',
-                                   'lastname' => 'Bloggs'
-                                 },
-                    'tsmith' => {
-                                  'firstname' => 'Tom',
-                                  'lastname' => 'Smith'
-                                },
-                    'jsmith' => {
-                                  'firstname' => 'Joe',
-                                  'lastname' => 'Smith'
-                                }
-                  }
+      person => {
+         jbloggs => {
+            firstname => 'Joe',
+            lastname  => 'Bloggs'
+         },
+         tsmith  => {
+            firstname => 'Tom',
+            lastname  => 'Smith'
+         },
+         jsmith => {
+            firstname => 'Joe',
+            lastname => 'Smith'
+         }
+      }
     }
 
 
@@ -1106,14 +1090,11 @@ The <anon> tag can be used to form anonymous arrays:
     </opt>
 
     {
-      'head' => [
-                  [ 'Col 1', 'Col 2', 'Col 3' ]
-                ],
-      'data' => [
-                  [ 'R1C1', 'R1C2', 'R1C3' ],
-                  [ 'R2C1', 'R2C2', 'R2C3' ],
-                  [ 'R3C1', 'R3C2', 'R3C3' ]
-                ]
+      head => [ [ 'Col 1', 'Col 2', 'Col 3' ] ],
+      data => [ [ 'R1C1', 'R1C2', 'R1C3' ],
+                [ 'R2C1', 'R2C2', 'R2C3' ],
+                [ 'R3C1', 'R3C2', 'R3C3' ]
+              ]
     }
 
 Anonymous arrays can be nested to arbirtrary levels and as a special case, if
@@ -1143,8 +1124,8 @@ will be represented as a hashref with the text content in the 'content' key
   </opt>
 
   {
-    'one' => 'first',
-    'two' => { 'attr' => 'value', 'content' => 'second' }
+    one => 'first',
+    two => { attr => 'value', content => 'second' }
   }
 
 Mixed content (elements which contain both text content and nested elements)
