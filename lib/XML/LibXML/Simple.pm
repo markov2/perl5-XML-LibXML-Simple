@@ -881,19 +881,19 @@ values for the option are:
 
 =over 4
 
-=item 0
+=item "0"
 
 (default) whitespace is passed through unaltered (except of course for the
 normalisation of whitespace in attribute values which is mandated by the XML
 recommendation)
 
-=item 1
+=item "1"
 
 whitespace is normalised in any value used as a hash key (normalising means
 removing leading and trailing whitespace and collapsing sequences of whitespace
 characters to a single space)
 
-=item 2
+=item "2"
 
 whitespace is normalised in all text content
 

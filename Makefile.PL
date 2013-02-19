@@ -4,11 +4,10 @@ use 5.008;
 
 WriteMakefile
  ( NAME	 	=> 'XML::LibXML::Simple'
- , VERSION	=> '0.92'
+ , VERSION	=> '0.93'
  , PREREQ_PM    =>
    { XML::LibXML     => 1.64
    , Test::More      => 0.54
-   , Test::Pod       => '1.00'
    , File::Slurp     => 0
    }
  , AUTHOR       => 'Mark Overmeer'
