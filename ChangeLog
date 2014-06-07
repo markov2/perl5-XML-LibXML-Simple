@@ -1,8 +1,17 @@
 
 === version history for XML::LibXML::Simple
 
-version 0.93:
+version 0.94: Sat Jun  7 22:39:23 CEST 2014
+
+	Improvements:
+	- change documentation style.
+	- replace File::Slurp by File::Slurp::Tiny [Caleb Cushing]
+
+version 0.93: Sat Mar  2 11:58:52 CET 2013
+
+	Improvements:
 	- move pod-test to xt/
+	- fix warning produced by Pod::Checker
 
 version 0.92: Fri Dec 21 12:22:16 CET 2012
 
@@ -10,11 +19,13 @@ version 0.92: Fri Dec 21 12:22:16 CET 2012
 	- include license in the manuals.
 
 version 0.91: Mon Jul 11 22:40:02 CEST 2011
+
 	Fixes:
 	- forcearray option with one element
 	  rt.cpan.org#69336 [Matt W Johnson]
 
 version 0.90: Wed Jun 15 10:20:48 CEST 2011
+
 	Fixes:
 	- initialize XML::LibXML::Parser into safe mode.
 	  rt.cpan.org#68803 [Yann Kerherve]
@@ -23,17 +34,20 @@ version 0.90: Wed Jun 15 10:20:48 CEST 2011
 	- new Parser and ParserOpts parameters
 
 version 0.15: Thu Apr 28 10:22:34 CEST 2011
+
 	Fixes:
 	- parser object recreated each time, because it cannot be
 	  reused (any more?). [Didier Brun]
 
 version 0.14: Fri Jul 16 11:17:49 CEST 2010
+
 	Fixes:
 	- do not use /bin/pwd in t/99pod.t
 	- forgot to define xml_in.
 	  rt.cpan.org#59172 [Justin Case]
 
 version 0.13: Wed Nov 19 11:03:52 CET 2008
+
 	Fixes:
 	- do not try to expand namespace in "pseudo-" attributes, like
 	  namespace declarations.
@@ -43,10 +57,12 @@ version 0.13: Wed Nov 19 11:03:52 CET 2008
 	- add option NsStrip
 
 version 0.12: Wed Mar 26 11:43:09 CET 2008
+
 	Fixes:
 	- fix tests on Windows.
 
 version 0.11: Fri Feb  8 14:41:35 CET 2008
+
 	Improvements:
 	- moved XML input parsing to separate subroutine
 	- added ChangeLog

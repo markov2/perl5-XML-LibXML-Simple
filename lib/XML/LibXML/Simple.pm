@@ -7,10 +7,10 @@ use warnings;
 our @EXPORT    = qw(XMLin);
 our @EXPORT_OK = qw(xml_in);
 
-use XML::LibXML    ();
-use File::Slurp    qw/read_file/;
-use File::Basename qw/fileparse/;
-use File::Spec     ();
+use XML::LibXML       ();
+use File::Slurp::Tiny qw/read_file/;
+use File::Basename    qw/fileparse/;
+use File::Spec        ();
 use Carp;
 
 use Data::Dumper;  #to be removed
@@ -50,12 +50,12 @@ my $DefContentKey  = qq(content);
 
 =section Constructors
 
-=c_method new OPTIONS
+=c_method new %options
 Instantiate an object, which can be used to call M<XMLin()> on.  You can
-provide OPTIONS to this constructor (to be reused for each call to XMLin)
+provide %options to this constructor (to be reused for each call to XMLin)
 and with each call of XMLin (to be used once)
 
-For XML-DATA and descriptions of the OPTIONS see the L</DETAILS>
+For descriptions of the %options see the L</DETAILS>
 section of this manual page.
 
 =cut
@@ -74,8 +74,8 @@ sub new(@)
 
 =section Translators
 
-=method XMLin XML-DATA, OPTIONS
-For XML-DATA and descriptions of the OPTIONS see the L</DETAILS>
+=method XMLin $xmldata, %options
+For $xmldata and descriptions of the %options see the L</DETAILS>
 section of this manual page.
 
 =cut

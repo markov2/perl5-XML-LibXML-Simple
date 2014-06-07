@@ -4,11 +4,11 @@ use 5.008;
 
 WriteMakefile
  ( NAME	 	=> 'XML::LibXML::Simple'
- , VERSION	=> '0.93'
+ , VERSION	=> '0.94'
  , PREREQ_PM    =>
-   { XML::LibXML     => 1.64
-   , Test::More      => 0.54
-   , File::Slurp     => 0
+   { XML::LibXML       => 1.64
+   , Test::More        => 0.54
+   , File::Slurp::Tiny => 0
    }
  , AUTHOR       => 'Mark Overmeer'
  , ABSTRACT     => 'XML::LibXML based XML::Simple clone'
