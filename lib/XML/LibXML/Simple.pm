@@ -21,14 +21,18 @@ XML::LibXML::Simple - XML::LibXML clone of XML::Simple::XMLin()
 
 =chapter SYNOPSIS
 
+  my $xml  = ...;  # filename, fh, string, or XML::LibXML-node
+
+Imperative:
+
   use XML::LibXML::Simple   qw(XMLin);
-  my $xml = XMLin <xml file or string>, OPTIONS;
+  my $data = XMLin $xml, %options;
 
 Or the Object Oriented way:
 
   use XML::LibXML::Simple   ();
-  my $xs = XML::LibXML::Simple->new(OPTIONS);
-  my $ref = $xs->XMLin(<xml file or string>, OPTIONS);
+  my $xs   = XML::LibXML::Simple->new(%options);
+  my $data = $xs->XMLin($xml, %options);
 
 =chapter DESCRIPTION
 
@@ -40,7 +44,7 @@ uses plain Perl or SAX parsers.
 
 =cut
 
-my %known_opts = map { ($_ => 1) }
+my %known_opts = map +($_ => 1),
   qw(keyattr keeproot forcecontent contentkey noattr searchpath
      forcearray grouptags nsexpand normalisespace normalizespace
      valueattr nsstrip parser parseropts);
@@ -48,6 +52,7 @@ my %known_opts = map { ($_ => 1) }
 my @DefKeyAttr     = qw(name key id);
 my $DefContentKey  = qq(content);
 
+#-------------
 =section Constructors
 
 =c_method new %options
@@ -72,6 +77,7 @@ sub new(@)
     $self;
 }
 
+#-------------
 =section Translators
 
 =method XMLin $xmldata, %options
@@ -489,7 +495,9 @@ sub array_to_hash($$$$)
 
     # first go through the values, checking that they are fit to collapse
     foreach my $v (values %out)
-    {   next if ref $v eq 'HASH' && keys %$v == 1 && $v->{$contentkey};
+    {   next if !defined $v;
+        next if ref $v eq 'HASH' && keys %$v == 1 && exists $v->{$contentkey};
+        next if ref $v eq 'HASH' && !keys %$v;
         return \%out;
     }
 
@@ -509,37 +517,8 @@ with the provided parameters.
 
 =chapter DETAILS
 
-=section Differences with XML::Simple
 
-In general, the output and the options are equivalent, although this
-module has some differences with M<XML::Simple> to be aware of.
-
-=over 4
-
-=item only M<XMLin()> is supported
-
-If you want to write XML then use a schema (for instance with
-M<XML::Compile>). Do not attempt to create XML by hand!  If you still
-think you need it, then have a look at XMLout() as implemented by
-M<XML::Simple> or any of a zillion template systems.
-
-=item no "variables" option
-
-IMO, you should use a templating system if you want variables filled-in
-in the input: it is not a task for this module.
-
-=item empty elements are not removed
-
-Being empty has a meaning which should not be ignored.
-
-=item ForceArray options
-
-There are a few small differences in the result of the C<forcearray> option,
-because M<XML::Simple> seems to behave inconsequently.
-
-=back
-
-=section Parameter XML-DATA
+=section Parameter $xmldata
 
 As first parameter to M<XMLin()> must provide the XML message to be
 translated into a Perl structure.  Choose one of the following:
@@ -552,7 +531,7 @@ If the filename contains no directory components, C<XMLin()> will look for the
 file in each directory in the SearchPath (see OPTIONS below) and in the
 current directory.  eg:
 
-  $ref = XMLin('/etc/params.xml');
+  $data = XMLin('/etc/params.xml', %options);
 
 Note, the filename C<< - >> (dash) can be used to parse from STDIN.
 
@@ -563,25 +542,31 @@ each of the SearchPath directories for a file with the same name as the script
 but with the extension '.xml'.  Note: if you wish to specify options, you
 must specify the value 'undef'.  eg:
 
-  $ref = XMLin(undef, ForceArray => 1);
+  $data = XMLin(undef, ForceArray => 1);
 
 =item A string of XML
 
 A string containing XML (recognised by the presence of '<' and '>' characters)
 will be parsed directly.  eg:
 
-  $ref = XMLin('<opt username="bob" password="flurp" />');
+  $data = XMLin('<opt username="bob" password="flurp" />', %options);
 
 =item An IO::Handle object
 
-An IO::Handle object will be read to EOF and its contents parsed. eg:
+In this case, XML::LibXML::Parser will read the XML data directly from
+the provided file.
 
-  $fh = IO::File->new('/etc/params.xml');
-  $ref = XMLin($fh);
+  $fh  = IO::File->new('/etc/params.xml');
+  $data = XMLin($fh, %options);
+
+=item An XML::LibXML::Document or ::Element
+
+[Not available in XML::Simple] When you have a pre-parsed XML::LibXML
+node, you can pass that.
 
 =back
 
-=section OPTIONS
+=section Parameter %options
 
 M<XML::LibXML::Simple> supports most options defined by M<XML::Simple>, so
 the interface is quite compatible.  Minor changes apply.  This explanation
@@ -1133,10 +1118,42 @@ will be not be represented in a useful way - element order and significant
 whitespace will be lost.  If you need to work with mixed content, then
 XML::Simple is not the right tool for your job - check out the next section.
 
+=section Differences to XML::Simple
+
+In general, the output and the options are equivalent, although this
+module has some differences with M<XML::Simple> to be aware of.
+
+=over 4
+
+=item only M<XMLin()> is supported
+
+If you want to write XML then use a schema (for instance with
+M<XML::Compile>). Do not attempt to create XML by hand!  If you still
+think you need it, then have a look at XMLout() as implemented by
+M<XML::Simple> or any of a zillion template systems.
+
+=item no "variables" option
+
+IMO, you should use a templating system if you want variables filled-in
+in the input: it is not a task for this module.
+
+=item empty elements are not removed
+
+Being empty has a meaning which should not be ignored.
+
+=item ForceArray options
+
+There are a few small differences in the result of the C<forcearray> option,
+because M<XML::Simple> seems to behave inconsequently.
+
+=back
+
 =chapter SEE ALSO
 
-L<XML::Compile> for processing XML when a schema is available
+L<XML::Compile> for processing XML when a schema is available.  When you
+have a schema, the data and structure of your message get validated.
 
-L<XML::Simple>, the SAX and original implementation
+L<XML::Simple>, the original implementation which interface is followed
+as closely as possible.
 
 =cut
