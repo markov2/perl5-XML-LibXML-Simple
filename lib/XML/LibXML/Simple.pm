@@ -12,6 +12,7 @@ use File::Slurp::Tiny qw/read_file/;
 use File::Basename    qw/fileparse/;
 use File::Spec        ();
 use Carp;
+use Scalar::Util      qw/blessed/;
 
 use Data::Dumper;  #to be removed
 
@@ -49,8 +50,8 @@ my %known_opts = map +($_ => 1),
      forcearray grouptags nsexpand normalisespace normalizespace
      valueattr nsstrip parser parseropts);
 
-my @DefKeyAttr     = qw(name key id);
-my $DefContentKey  = qq(content);
+my @default_attributes  = qw(name key id);
+my $default_content_key = 'content';
 
 #-------------
 =section Constructors
@@ -87,21 +88,25 @@ section of this manual page.
 =cut
 
 sub XMLin
-{   my $self = @_ > 1 && UNIVERSAL::isa($_[0], __PACKAGE__) ? shift
+{   my $self = @_ > 1 && blessed $_[0] && $_[0]->isa(__PACKAGE__) ? shift
       : __PACKAGE__->new;
     my $target = shift;
 
-    my $this   = $self->_take_opts(@_);
-    my $opts   = $self->_init($self->{opts}, $this);
+    my $this = $self->_take_opts(@_);
+    my $opts = $self->_init($self->{opts}, $this);
 
-    my $xml    = $self->_get_xml($target, $opts)
+    my $xml  = $self->_get_xml($target, $opts)
         or return;
+
+    if(my $cb = $opts->{hooknodes})
+    {   $self->{XCS_hooks} = $cb->($self, $xml);
+    }
 
     my $top  = $self->collapse($xml, $opts);
     if($opts->{keeproot})
-    {    my $subtop
-           = $opts->{forcearray_always} && ref $top ne 'ARRAY' ? [$top] : $top;
-        $top = { $xml->localName => $subtop };
+    {   my $subtop
+          = $opts->{forcearray_always} && ref $top ne 'ARRAY' ? [$top] : $top;
+        $top = +{ $xml->localName => $subtop };
     }
 
     $top;
@@ -121,8 +126,9 @@ sub _get_xml($$)
               || $self->_create_parser($opts->{parseropts});
 
     my $xml
-      = UNIVERSAL::isa($source,'XML::LibXML::Document') ? $source
-      : UNIVERSAL::isa($source,'XML::LibXML::Element' ) ? $source
+      = blessed $source &&
+        (  $source->isa('XML::LibXML::Document')
+        || $source->isa('XML::LibXML::Element' )) ? $source
       : ref $source eq 'SCALAR' ? $parser->parse_string($$source)
       : ref $source             ? $parser->parse_fh($source)
       : $source =~ m{^\s*\<.*?\>\s*$}s ? $parser->parse_string($source)
@@ -190,7 +196,7 @@ sub _init($$)
 
     if(defined $opt{contentkey})
          { $opt{collapseagain} = $opt{contentkey} =~ s/^\-// }
-    else { $opt{contentkey} = $DefContentKey }
+    else { $opt{contentkey} = $default_content_key }
 
     $opt{normalisespace} ||= $opt{normalizespace} || 0;
 
@@ -213,7 +219,7 @@ sub _init($$)
     # Special cleanup for {keyattr} which could be arrayref or hashref,
     # which behave differently.
 
-    my $ka = $opt{keyattr} || \@DefKeyAttr;
+    my $ka = $opt{keyattr} || \@default_attributes;
     $ka    = [ $ka ] unless ref $ka;
  
     if(ref $ka eq 'ARRAY')
@@ -300,19 +306,32 @@ sub collapse($$)
     $xml->isa('XML::LibXML::Element') or return;
 
     my (%data, $text);
+    my $hooks = $self->{XCS_hooks};
 
     unless($opts->{noattr})
-    {   foreach my $attr ($xml->attributes)
-        {   my $value = $attr->value;
+    {
+      ATTR:
+        foreach my $attr ($xml->attributes)
+        {
+            my $value;
+            if($hooks && (my $hook = $hooks->{$attr->unique_key}))
+            {   $value = $hook->($attr);
+                defined $value or next ATTR;
+            }
+            else
+            {   $value = $attr->value;
+            }
+
             $value = $self->normalise_space($value)
-                if $opts->{normalisespace}==2;
+                if !ref $value && $opts->{normalisespace}==2;
 
-            my $n  = !$attr->isa('XML::LibXML::Attr') ? $attr->nodeName
-                   : $opts->{nsexpand}                ? _expand_name($attr)
-                   : $opts->{nsstrip}                 ? $attr->localName
-                   :                                    $attr->nodeName;
+            my $name
+              = !$attr->isa('XML::LibXML::Attr') ? $attr->nodeName
+              : $opts->{nsexpand} ? _expand_name($attr)
+              : $opts->{nsstrip}  ? $attr->localName
+              :                     $attr->nodeName;
 
-            _add_kv \%data, $n, $value, $opts;
+            _add_kv \%data, $name => $value, $opts;
         }
     }
     my $nr_attrs = keys %data;
@@ -321,17 +340,28 @@ sub collapse($$)
   CHILD:
     foreach my $child ($xml->childNodes)
     {
-        if($child->isa('XML::LibXML::Element'))
-        {   $nr_elems++;
-            my $v = $self->collapse($child, $opts);
-            my $n = $opts->{nsexpand} ? _expand_name($child)
-                  : $opts->{nsstrip}  ? $child->localName
-                  :                     $child->nodeName;
-            _add_kv \%data, $n, $v, $opts if defined $v;
-        }
-        elsif($child->isa('XML::LibXML::Text'))
+        if($child->isa('XML::LibXML::Text'))
         {   $text .= $child->data;
+            next CHILD;
         }
+
+        $child->isa('XML::LibXML::Element')
+            or next CHILD;
+
+        $nr_elems++;
+
+        my $v;
+        if($hooks && (my $hook = $hooks->{$child->unique_key}))
+             { $v = $hook->($child) }
+        else { $v = $self->collapse($child, $opts) }
+        defined $v or next CHILD;
+
+        my $name
+          = $opts->{nsexpand} ? _expand_name($child)
+          : $opts->{nsstrip}  ? $child->localName
+          :                     $child->nodeName;
+
+        _add_kv \%data, $name => $v, $opts;
     }
 
     $text = $self->normalise_space($text)
@@ -346,8 +376,8 @@ sub collapse($$)
     # Roll up 'value' attributes (but only if no nested elements)
 
     if(keys %data==1)
-    {    my ($k) = keys %data;
-         return $data{$k} if $opts->{valueattrlist}{$k};
+    {   my ($k) = keys %data;
+        return $data{$k} if $opts->{valueattrlist}{$k};
     }
 
     # Turn arrayrefs into hashrefs if key fields present
@@ -421,7 +451,7 @@ sub array_to_hash($$$$)
     my $ka = $opts->{keyattr} or return $in;
 
     if(ref $ka eq 'HASH')
-    {   my $newkey = $ka->{$name}  or return $in;
+    {   my $newkey = $ka->{$name} or return $in;
         my ($key, $flag) = @$newkey;
 
         foreach my $h (@$in)
@@ -449,7 +479,7 @@ sub array_to_hash($$$$)
     }
 
     else  # Arrayref
-    {   my $default_keys = "@DefKeyAttr" eq "@$ka";
+    {   my $default_keys = "@default_attributes" eq "@$ka";
 
       ELEMENT:
         foreach my $h (@$in)
@@ -517,7 +547,6 @@ with the provided parameters.
 
 =chapter DETAILS
 
-
 =section Parameter $xmldata
 
 As first parameter to M<XMLin()> must provide the XML message to be
@@ -533,16 +562,25 @@ current directory.  eg:
 
   $data = XMLin('/etc/params.xml', %options);
 
-Note, the filename C<< - >> (dash) can be used to parse from STDIN.
+=item A dash  (-)
+
+Parse from STDIN.
+
+  $data = XMLin('-', %options);
 
 =item undef
 
+[deprecated]
 If there is no XML specifier, C<XMLin()> will check the script directory and
 each of the SearchPath directories for a file with the same name as the script
 but with the extension '.xml'.  Note: if you wish to specify options, you
 must specify the value 'undef'.  eg:
 
   $data = XMLin(undef, ForceArray => 1);
+
+This feature is available for backwards compatibility with M<XML::Simple>,
+but quite sensitive.  You can easily hit the wrong xml file as input.
+Please do not use it: always use an explicit filename.
 
 =item A string of XML
 
@@ -556,7 +594,9 @@ will be parsed directly.  eg:
 In this case, XML::LibXML::Parser will read the XML data directly from
 the provided file.
 
-  $fh  = IO::File->new('/etc/params.xml');
+  # $fh = IO::File->new('/etc/params.xml') or die;
+  open my $fh, '<:encoding(utf8)', '/etc/params.xml' or die;
+
   $data = XMLin($fh, %options);
 
 =item An XML::LibXML::Document or ::Element
@@ -742,6 +782,50 @@ You can specify multiple 'grouping element' to 'grouped element' mappings in
 the same hashref.  If this option is combined with C<KeyAttr>, the array
 folding will occur first and then the grouped element names will be eliminated.
 
+=item HookNodes => CODE
+Select document nodes to apply special tricks.
+Introduced in [0.96], not available in XML::Simple.
+
+When this option is provided, the CODE will be called once the XML DOM
+tree is ready to get transformed into Perl.  Your CODE should return
+either C<undef> (nothing to do) or a HASH which maps values of
+unique_key (see M<XML::LibXML::Node> method C<unique_key> onto CODE
+references to be called.
+
+Once the translater from XML into Perl reaches a selected node, it will
+call your routine specific for that node.  That triggering node found
+is the only parameter.  When you return C<undef>, the node will not be
+found in the final result.  You may return any data (even the node itself)
+which will be included in the final result as is, under the name of the
+original node.
+
+Example:
+
+   my $out = XMLin $file, HookNodes => \&protect_html;
+
+   sub protect_html($$)
+   {   # $obj is the instantated XML::Compile::Simple object
+       # $xml is a XML::LibXML::Element to get transformed
+       my ($obj, $xml) = @_;
+
+       my %hooks;    # collects the table of hooks
+
+       # do an xpath search for HTML
+       my $xpc   = XML::LibXML::XPathContext->new($xml);
+       my @nodes = $xpc->findNodes(...); #XXX
+       @nodes or return undef;
+
+       my $as_text = sub { $_[0]->toString(0) };  # as text
+       #  $as_node = sub { $_[0] };               # as node
+       #  $skip    = sub { undef };               # not at all
+
+       # the same behavior for all xpath nodes, in this example
+       $hook{$_->unique_key} = $as_text
+           for @nodes;
+ 
+       \%hook;
+   }
+
 =item KeepRoot => 1 I<# handy>
 
 In its attempt to return a data structure free of superfluous detail and
@@ -865,21 +949,17 @@ This option controls how whitespace in text content is handled.  Recognised
 values for the option are:
 
 =over 4
-
 =item "0"
-
 (default) whitespace is passed through unaltered (except of course for the
 normalisation of whitespace in attribute values which is mandated by the XML
 recommendation)
 
 =item "1"
-
 whitespace is normalised in any value used as a hash key (normalising means
 removing leading and trailing whitespace and collapsing sequences of whitespace
 characters to a single space)
 
 =item "2"
-
 whitespace is normalised in all text content
 
 =back
@@ -1124,27 +1204,25 @@ In general, the output and the options are equivalent, although this
 module has some differences with M<XML::Simple> to be aware of.
 
 =over 4
-
 =item only M<XMLin()> is supported
-
 If you want to write XML then use a schema (for instance with
 M<XML::Compile>). Do not attempt to create XML by hand!  If you still
 think you need it, then have a look at XMLout() as implemented by
 M<XML::Simple> or any of a zillion template systems.
 
 =item no "variables" option
-
 IMO, you should use a templating system if you want variables filled-in
 in the input: it is not a task for this module.
 
 =item empty elements are not removed
-
 Being empty has a meaning which should not be ignored.
 
 =item ForceArray options
-
 There are a few small differences in the result of the C<forcearray> option,
 because M<XML::Simple> seems to behave inconsequently.
+
+=item hooks
+XML::Simple does not support hooks.
 
 =back
 

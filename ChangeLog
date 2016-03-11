@@ -1,6 +1,13 @@
 
 === version history for XML::LibXML::Simple
 
+version 0.96: Fri 11 Mar 15:09:43 CET 2016
+
+	Improvements:
+	- deprecate XML input from 'undef'
+	- rewrite UNIVERSAL::isa into blessed ->isa
+	- implement hooks on nodes
+
 version 0.95: Mon Dec 22 08:19:53 CET 2014
 
 	Fixes:
