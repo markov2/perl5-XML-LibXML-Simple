@@ -1,6 +1,11 @@
 
 === version history for XML::LibXML::Simple
 
+version 0.97: Tue 12 Apr 15:12:21 CEST 2016
+
+	Fixes:
+	- HookNodes parameter was not allowed. [Kit Peters]
+
 version 0.96: Fri 11 Mar 15:09:43 CET 2016
 
 	Improvements:

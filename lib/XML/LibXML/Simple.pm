@@ -48,7 +48,7 @@ uses plain Perl or SAX parsers.
 my %known_opts = map +($_ => 1),
   qw(keyattr keeproot forcecontent contentkey noattr searchpath
      forcearray grouptags nsexpand normalisespace normalizespace
-     valueattr nsstrip parser parseropts);
+     valueattr nsstrip parser parseropts hooknodes);
 
 my @default_attributes  = qw(name key id);
 my $default_content_key = 'content';
