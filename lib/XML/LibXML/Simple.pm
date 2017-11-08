@@ -8,7 +8,6 @@ our @EXPORT    = qw(XMLin);
 our @EXPORT_OK = qw(xml_in);
 
 use XML::LibXML       ();
-use File::Slurp::Tiny qw/read_file/;
 use File::Basename    qw/fileparse/;
 use File::Spec        ();
 use Carp;
@@ -40,6 +39,11 @@ Or the Object Oriented way:
 This module is a blunt rewrite of M<XML::Simple> (by Grant McLean) to
 use the M<XML::LibXML> parser for XML structures, where the original
 uses plain Perl or SAX parsers.
+
+B<Be warned:> this module thinks to be smart.  You may very well shoot
+yourself in the foot with this DWIMmery.  Read the whole manual page
+at least once before you start using it.  If your XML is described in
+a schema or WSDL, then use M<XML::Compile> for maintainable code.
 
 =chapter METHODS
 
@@ -637,7 +641,7 @@ In alphabetic order:
 
 =item ContentKey => 'keyname' I<# seldom used>
 
-When text content is parsed to a hash value, this option let's you specify a
+When text content is parsed to a hash value, this option lets you specify a
 name for the hash key to override the default 'content'.  So for example:
 
   XMLin('<opt one="1">Two</opt>', ContentKey => 'text')
