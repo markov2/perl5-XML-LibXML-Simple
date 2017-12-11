@@ -74,7 +74,6 @@ section of this manual page.
 
 =cut
 
-my $parser;
 sub XMLin
 {   my $self = @_ > 1 && UNIVERSAL::isa($_[0], __PACKAGE__) ? shift
       : __PACKAGE__->new;
@@ -82,24 +81,9 @@ sub XMLin
 
     my $this   = $self->_take_opts(@_);
     my $opts   = $self->_init($self->{opts}, $this);
-    $parser  ||= XML::LibXML->new;
 
-    $target    = $self->default_data_source($opts) unless defined $target;
-    $target    = \*STDIN if $target eq '-';
-
-    my $xml
-    = UNIVERSAL::isa($target,'XML::LibXML::Document')? $target
-    : UNIVERSAL::isa($target,'XML::LibXML::Element') ? $target
-    : ref $target eq 'SCALAR'      ? $parser->parse_string($$target)
-    : ref $target                  ? $parser->parse_fh($target)
-    : $target =~ m{^\s*<.*?>\s*$}s ? $parser->parse_string($target)
-    :    $parser->parse_file
-            ($self->find_xml_file($target, @{$opts->{searchpath}}));
-
-    $xml or return;
-
-    $xml = $xml->documentElement
-        if $xml->isa('XML::LibXML::Document');
+    my $xml    = $self->_get_xml($target, $opts)
+        or return;
 
     my $top  = $self->collapse($xml, $opts);
     if($opts->{keeproot})
@@ -109,6 +93,30 @@ sub XMLin
     }
 
     $top;
+}
+
+my $parser;
+sub _get_xml($$)
+{   my ($self, $source, $opts) = @_;
+
+    $source    = $self->default_data_source($opts) unless defined $source;
+    $source    = \*STDIN if $source eq '-';
+
+    $parser  ||= XML::LibXML->new;
+
+    my $xml
+      = UNIVERSAL::isa($source,'XML::LibXML::Document') ? $source
+      : UNIVERSAL::isa($source,'XML::LibXML::Element') ? $source
+      : ref $source eq 'SCALAR'      ? $parser->parse_string($$source)
+      : ref $source                  ? $parser->parse_fh($source)
+      : $source =~ m{^\s*<.*?>\s*$}s ? $parser->parse_string($source)
+      :    $parser->parse_file
+              ($self->find_xml_file($source, @{$opts->{searchpath}}));
+
+    $xml = $xml->documentElement
+         if $xml->isa('XML::LibXML::Document');
+
+    $xml;
 }
 
 sub _take_opts(@)
@@ -464,21 +472,41 @@ __END__
 =chapter FUNCTIONS
 
 The functions C<XMLin> (exported implictly) and C<xml_in>
-(exported on demand) simply call C<< XML::Simple->new->XMLin() >>
+(exported on request) simply call C<< XML::Simple->new->XMLin() >>
 with the provided parameters.
 
 =chapter DETAILS
 
 =section Differences with XML::Simple
 
+In general, the output and the options are equivalent, although this
+module has some differences with M<XML::Simple> to be aware of.
+
+=over 4
+
+=item .
+
 Only M<XMLin()> is supported: if you want to write XML the use a schema
 (for instance with M<XML::Compile>).  Do not attempt to create XML by
 hand!  If you still think you need it, then have a look at XMLout() as
 implemented by M<XML::Simple> or any of a zillion template systems.
 
+=item .
+
 IMO, you should use a templating system if you want variables filled-in
-in the input: it is not a task for this module.  Also, empty elements
-should not be removed: empty has a meaning.
+in the input: it is not a task for this module.
+
+=item .
+
+Also, empty elements are not removed: being empty has a meaning which
+should not be ignored.
+
+=item .
+
+There are a few small differences in the result of the C<forcearray> option,
+because XML::Simple seems to behave inconsequently.
+
+=back
 
 =section Parameter XML-DATA
 
