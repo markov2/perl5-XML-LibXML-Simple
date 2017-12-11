@@ -1,0 +1,9 @@
+MANIFEST
+Makefile.PL
+lib/XML/LibXML/Simple.pm
+t/01use.t
+t/10XMLin.t
+t/10XMLin.xml
+t/srt.xml
+t/subdir/test2.xml
+t/test1.xml
