@@ -52,7 +52,7 @@ a schema or WSDL, then use M<XML::Compile> for maintainable code.
 my %known_opts = map +($_ => 1),
   qw(keyattr keeproot forcecontent contentkey noattr searchpath
      forcearray grouptags nsexpand normalisespace normalizespace
-     valueattr nsstrip parser parseropts hooknodes);
+     valueattr nsstrip parser parseropts hooknodes suppressempty);
 
 my @default_attributes  = qw(name key id);
 my $default_content_key = 'content';
@@ -358,7 +358,9 @@ sub collapse($$)
         if($hooks && (my $hook = $hooks->{$child->unique_key}))
              { $v = $hook->($child) }
         else { $v = $self->collapse($child, $opts) }
-        defined $v or next CHILD;
+
+		next CHILD
+        	if ! defined $v && $opts->{suppressempty};
 
         my $name
           = $opts->{nsexpand} ? _expand_name($child)
@@ -419,6 +421,12 @@ sub collapse($$)
         if keys %data == 1
         && exists $data{anon}
         && ref $data{anon} eq 'ARRAY';
+
+    # Suppress empty elements?
+    if(! keys %data && exists $opts->{suppressempty}) {
+		my $sup = $opts->{suppressempty};
+        return +(defined $sup && $sup eq '') ? '' : undef;
+    }
 
     # Roll up named elements with named nested 'value' attributes
     if(my $va = $opts->{valueattrlist})
@@ -894,7 +902,7 @@ rolled up into a scalar rather than an array and therefore will not be folded
 
 =item KeyAttr => { list } I<# important>
 
-This alternative (and preferred) method of specifiying the key attributes
+This alternative (and preferred) method of specifying the key attributes
 allows more fine grained control over which elements are folded and on which
 attributes.  For example the option 'KeyAttr => { package => 'id' } will cause
 any package elements to be folded on the 'id' attribute.  No other elements
@@ -1000,6 +1008,15 @@ file is assumed to be in the current directory.
 If the first parameter to C<XMLin()> is undefined, the default SearchPath
 will contain only the directory in which the script itself is located.
 Otherwise the default SearchPath will be empty.  
+
+=item SuppressEmpty => 1 | '' | undef
+
+[0.99] What to do with empty elements (no attributes and no content).  The
+default behaviour is to represent them as empty hashes.  Setting this
+option to a true value (eg: 1) will cause empty elements to be skipped
+altogether.  Setting the option to 'undef' or the empty string will
+cause empty elements to be represented as the undefined value or the
+empty string respectively.
 
 =item ValueAttr => [ names ] I<# handy>
 
@@ -1217,9 +1234,6 @@ M<XML::Simple> or any of a zillion template systems.
 =item no "variables" option
 IMO, you should use a templating system if you want variables filled-in
 in the input: it is not a task for this module.
-
-=item empty elements are not removed
-Being empty has a meaning which should not be ignored.
 
 =item ForceArray options
 There are a few small differences in the result of the C<forcearray> option,
