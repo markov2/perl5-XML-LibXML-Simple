@@ -4,7 +4,7 @@ use 5.010;
 
 WriteMakefile
  ( NAME	 	=> 'XML::LibXML::Simple'
- , VERSION	=> '1.00'
+ , VERSION	=> '1.01'
  , PREREQ_PM    =>
    { XML::LibXML       => 1.64
    , Test::More        => 0.54
