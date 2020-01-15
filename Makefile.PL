@@ -10,7 +10,7 @@ WriteMakefile
    , Test::More        => 0.54
    , Scalar::Util      => 0
    }
- , AUTHOR       => 'Mark Overmeer'
+ , AUTHOR       => 'Mark Overmeer <markov@cpan.org>'
  , ABSTRACT     => 'XML::LibXML alternative to XML::Simple::XMLin()'
  , LICENSE      => 'perl_5'
 
