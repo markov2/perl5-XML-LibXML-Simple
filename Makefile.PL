@@ -1,6 +1,8 @@
 use ExtUtils::MakeMaker;
 
-use 5.010;
+#XXX Slaven needs 5.8 to be supported.  Do not change this without
+#XXX warning him.
+use 5.008;
 
 WriteMakefile
  ( NAME	 	=> 'XML::LibXML::Simple'
