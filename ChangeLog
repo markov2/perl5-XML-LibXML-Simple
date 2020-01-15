@@ -1,6 +1,14 @@
 
 === version history for XML::LibXML::Simple
 
+version 1.00:
+
+	Changes:
+	- require perl 5.10
+
+	Improvements:
+	- converted to GitHUB
+
 version 0.99: Mon 11 Dec 12:53:14 CET 2017
 
 	Changes:

@@ -1,6 +1,7 @@
 ChangeLog
 MANIFEST
 Makefile.PL
+README.md
 lib/XML/LibXML/Simple.pm
 t/01use.t
 t/10XMLin.t
