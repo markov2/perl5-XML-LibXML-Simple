@@ -3,6 +3,11 @@
 
 version 1.02:
 
+	Improvements:
+	- document difference between XML::Simple and XML::LibXML::Simple
+	  on the return of an element which only contains white space.
+	  github#1 [tony-o]
+
 version 1.01: Wed 15 Jan 2020 10:47:10 PM CET
 
 	Changes:

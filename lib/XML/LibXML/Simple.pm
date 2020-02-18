@@ -46,7 +46,7 @@ uses plain Perl or SAX parsers.
 
 B<Be warned:> this module thinks to be smart.  You may very well shoot
 yourself in the foot with this DWIMmery.  Read the whole manual page
-at least once before you start using it.  If your XML is described in
+at least once before you start using it.  When your XML is described in
 a schema or WSDL, then use M<XML::Compile> for maintainable code.
 
 =chapter METHODS
@@ -1242,6 +1242,12 @@ in the input: it is not a task for this module.
 =item ForceArray options
 There are a few small differences in the result of the C<forcearray> option,
 because M<XML::Simple> seems to behave inconsequently.
+
+=item Elements with only blanks
+When your element contains white space (new-lines etc), it is
+not considered an empty list of sub-elements (XML::Simple returns an
+empty HASH), but a simple text string containing those white space
+characters.
 
 =item hooks
 XML::Simple does not support hooks.
